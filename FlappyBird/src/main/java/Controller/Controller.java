@@ -1,6 +1,6 @@
 package Controller;
 
-import Model.Couple;
+import Model.Bird;
 import Model.Pipe;
 import com.google.gson.Gson;
 
@@ -10,102 +10,75 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 
 @WebServlet("/controller")
 public class Controller extends HttpServlet {
-    private int boardWith, boardHeight;
-    private int birdX, birdY, birdWidth, birdHeight,
+    private int boardWidth, boardHeight,
+            birdX, birdY, birdWidth, birdHeight,
             pipeX, pipeY, pipeWidth, pipeHeight;
-    private static final int GRAVITY = 0, SPACING = 100;
-    boolean gameover = false;
-    double score = 0;
 
-    private ArrayList<Couple> coupleList;
+    private String background = "Resources/background.png",
+            birdImg = "Resources/bird.png",
+            topPipeImg = "Resources/toppipe.png",
+            bottomPipeImg = "Resources/bottompipe.png";
+
+    // game logic
+    private Bird bird;
+    private int velocityX = -4; //move pipes to the left speed (simulates bird moving right)
+    private int velocityY = 0; //move bird up/down speed.
+    private int gravity = 1;
+    private ArrayList<Pipe> pipes;
+    private Random random = new Random();
+    private boolean gameOver = false;
+    private int score = 0;
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String action = req.getParameter("action");
         switch (action) {
-            case "boardgame":
-                boardGame(req, resp);
-                break;
-            case "current-bird":
-                currentBird(req, resp);
-                break;
-            case "other-size":
-                setSizeOther(req, resp);
-                break;
-            case "add-couple":
-                addCouple(req, resp);
-                break;
-            case "load-pipes":
-                getCoupleList(req, resp);
+           case "start":
+                start(req, resp);
                 break;
         }
     }
 
-    private void getCoupleList(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Gson gson = new Gson();
-        coupleList.forEach(couple->{
-            couple.next();
-        });
-        String json = gson.toJson(coupleList);
-        resp.getWriter().write(json);
-    }
+    private void start(HttpServletRequest req, HttpServletResponse resp) {
+        try {
+            boardWidth = Integer.parseInt(req.getParameter("boardWidth"));
+            boardHeight = Integer.parseInt(req.getParameter("boardHeight"));
 
-    private void addCouple(HttpServletRequest req, HttpServletResponse resp) {
-            Pipe top = new Pipe(), bottom = new Pipe();
+            birdX = boardWidth / 4;
+            birdY = boardHeight / 2;
+            birdWidth = 70;
+            birdHeight = 47;
 
-            top.setX(boardWith);
-            bottom.setX(boardWith);
+            pipeX = boardWidth;
+            pipeY = 0;
+            pipeWidth = 70;
+            pipeHeight = boardHeight;
 
-            top.setWidth(pipeWidth);
-            bottom.setWidth(pipeWidth);
+            bird = new Bird(birdX, birdY, birdWidth, birdHeight, birdImg);
+            System.out.println("servlet da chay vao day");
 
-            int totalHeight = boardHeight - SPACING;
-            int topHeight = (int) (Math.random() * totalHeight);
-            topHeight = topHeight >= totalHeight ? topHeight / 2 : topHeight;
-            int bottomHeight = totalHeight - topHeight;
-            top.setHeight(topHeight);
-            bottom.setHeight(bottomHeight);
+            // Create a map to hold data
+            Map<String, Object> data = new HashMap<>();
+            data.put("background", background);
+            data.put("bird", bird);
+            data.put("topPipeImg", topPipeImg);
+            data.put("bottomPipeImg", bottomPipeImg);
 
-            top.setY(0);
-            bottom.setY(0);
+            // Convert map to JSON using Gson
+            Gson gson = new Gson();
+            String json = gson.toJson(data);
 
-            top.setImage("toppipe.png");
-            bottom.setImage("bottompipe.png");
-
-            coupleList.add(new Couple(top, bottom));
-    }
-
-    private void setSizeOther(HttpServletRequest req, HttpServletResponse resp) {
-        int birdWidth = Integer.parseInt(req.getParameter("birdWidth")),
-                birdHeight = Integer.parseInt(req.getParameter("birdHeight")),
-                pipeWidth = Integer.parseInt(req.getParameter("pipeWidth")),
-                pipeHeight = Integer.parseInt(req.getParameter("pipeHeight"));
-        System.out.println("birdWidth: " + birdWidth + " birdHeight: " + birdHeight);
-        System.out.println("pipeWidth: " + pipeWidth + " pipeHeight: " + pipeHeight);
-        this.birdWidth = birdWidth;
-        this.birdHeight = birdHeight;
-        this.pipeWidth = pipeWidth;
-        this.pipeHeight = pipeHeight;
-    }
-
-    private void currentBird(HttpServletRequest req, HttpServletResponse resp) {
-        int currentX = Integer.parseInt(req.getParameter("currentX")),
-                currentY = Integer.parseInt(req.getParameter("currentY"));
-        System.out.println("currentX: " + currentX + " currentY: " + currentY);
-        birdX = currentX;
-        birdY = currentY;
-    }
-
-    // set resolution
-    private void boardGame(HttpServletRequest req, HttpServletResponse resp) {
-        int width = Integer.parseInt(req.getParameter("boardWith")),
-                height = Integer.parseInt(req.getParameter("boardHeight"));
-        System.out.println("width: " + width + " height: " + height);
-        boardWith = width;
-        boardHeight = height;
+            // Write JSON as response
+            resp.setContentType("application/json");
+            resp.getWriter().write(json);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
