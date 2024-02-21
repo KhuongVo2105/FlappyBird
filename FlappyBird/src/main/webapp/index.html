@@ -19,17 +19,199 @@
         margin: 0;
         background-image: url("Resources/background.png");
         background-size: 100% 100%;
+
+        position: relative;
+    }
+
+    #bird {
+        position: absolute;
+        top: 50%;
+        left: 15%;
+        width: 64px;
+        height: 43px;
+
+        border: 1px solid black;
+    }
+
+    .pipe {
+        position: absolute;
+        width: 64px;
+        height: 600px;
+        left: 90%
+    }
+
+    .top-pipe {
+        top: -400px;
+    }
+
+    .bottom-pipe {
+        bottom: 0;
     }
 </style>
-
-<button type="button">click</button>
-
+<img id="bird" src="Resources/bird.png">
+<img class="pipe top-pipe" src="Resources/toppipe.png">
+<img class="pipe bottom-pipe" src="Resources/bottompipe.png">
 <script>
+    let birdX, birdY, birdHeight, birdWidth,
+        pipeX, pipeY, pipeWidth, pipeHeight,
+        boardWith, boardHeight,
+        coupleList = []
+
     $(document).ready(function () {
-        $('button').click(function () {
-            console.log('click click')
+        boardGame()
+        locCurrentBird()
+        getOtherSize()
+
+        $(document).keydown(function (event) {
+            const code = event.keyCode;
+            if (code == 32 || code == 38) {
+                console.log('key down: ' + event.keyCode)
+            }
         })
+        // auto refresh screen
+        setInterval(refresh, 1000 / 30)
+
+        //
+        setInterval(addCouple, 3000)
     })
+
+    function refresh() {
+        // window.location.reload();
+        console.log('refresh')
+        loadPipes()
+        renderPipes()
+    }
+
+    function renderPipes(){
+        if (coupleList.length > 0) {
+            $('body').remove($('.pipe'))
+            coupleList.forEach((couple,index)=>{
+                $('body').append(
+                    $('<img>').attr('class','pipe top-pipe')
+                        .attr('src',couple.top.image)
+                        .attr('x',couple.top.x)
+                        .style('left',couple.top.x + 'px')
+                )
+
+            })
+        }
+    }
+    function loadPipes() {
+        $.ajax({
+            url: 'controller',
+            method: 'get',
+            data: {
+                action: 'load-pipes'
+            },
+            success: function (data) {
+                console.log('load-pipes: ' + data)
+                coupleList = JSON.parse(data)
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
+
+    // when user click on space or up arrow
+    function jump() {
+        $.ajax({
+            url: '/controller',
+            method: 'get',
+            data: {
+                action: 'jump',
+                currentY: birdY
+            },
+            success: function (data) {
+                console.log(data)
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
+
+    function drop() {
+        $('body').remove($('#bird'))
+
+    }
+
+    function addCouple() {
+        $.ajax({
+            url: "document",
+            method: 'get',
+            data: {
+                action: 'add-couple'
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
+
+    function locCurrentBird() {
+        birdX = $('#bird').position().left
+        birdY = $('#bird').position().top
+
+        $.ajax({
+            url: 'controller',
+            method: 'get',
+            data: {
+                action: 'current-bird',
+                currentX: birdX,
+                currentY: birdY
+            },
+            success: function (data) {
+
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
+
+    function getOtherSize() {
+        birdWidth = $('#bird').width()
+        birdHeight = $('#bird').height()
+        pipeWidth = $('.pipe').width()
+        pipeHeight = $('.pipe').height()
+
+        $.ajax({
+            url: 'controller',
+            method: 'get',
+            data: {
+                action: 'other-size',
+                birdWidth: birdWidth,
+                birdHeight: birdHeight,
+                pipeWidth: pipeWidth,
+                pipeHeight: pipeHeight
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
+
+    // get resolution on window
+    function boardGame() {
+        boardWith = window.innerWidth
+        boardHeight = window.innerHeight
+        $.ajax({
+            url: 'controller',
+            method: 'get',
+            data: {
+                action: 'boardgame',
+                boardWith: boardWith,
+                boardHeight: boardHeight
+            },
+            success: function (data) {
+
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
 </script>
 </body>
 </html>
