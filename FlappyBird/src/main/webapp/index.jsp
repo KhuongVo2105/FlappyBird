@@ -27,41 +27,87 @@
     Bird bird = (Bird) request.getAttribute("bird");
 %>
 <body>
-    <style>
-        html, body {
-            width: 100vw;
-            height: 100vh;
-        }
+<style>
+    html, body {
+        width: 100vw;
+        height: 100vh;
+    }
 
-        body {
-            margin: 0;
-            background-image: url(<%=webUrl+"/"+background%>);
-            background-size: 100% 100%;
-            overflow: hidden;
+    body {
+        margin: 0;
+        background-image: url(<%=webUrl+"/"+background%>);
+        background-size: 100% 100%;
+        overflow: hidden;
 
-            position: relative;
-        }
+        position: relative;
+    }
 
-        #bird {
-            position: absolute;
-            border: 1px solid black;
-        }
+    #bird {
+        position: absolute;
+        border: 1px solid black;
+    }
 
-        .pipe {
-            position: absolute;
-            width: 64px;
-            height: 100vh;
-        }
-    </style>
-    <img id="bird">
-    <img class="pipe" style="top: -400px; left: 90%" src="<%=webUrl+"/"+topPipeImg%>">
-    <img class="pipe" style="top: 840px; left: 90%" src="<%=webUrl+"/"+bottomPipeImg%>">
+    .pipe {
+        position: absolute;
+        width: 64px;
+        height: 100vh;
+    }
+</style>
+<img id="bird">
+<img class="pipe" style="top: -400px; left: 90%" src="<%=webUrl+"/"+topPipeImg%>">
+<img class="pipe" style="top: 840px; left: 90%" src="<%=webUrl+"/"+bottomPipeImg%>">
 <script>
-    let boardWidth, boardHeight
+    let boardWidth, boardHeight,
+        pipeWidth, pipeHeight
 
     $(document).ready(function () {
         start();
+        setInterval(placePipeTimer, 5000)
+        setInterval(gameLoop, 1000 / 30)
     })
+
+    function gameLoop() {
+        // Di chuyển ống sang trái
+        $('.pipe').each(function () {
+            const currentLeft = parseInt($(this).css('left'));
+            const newLeft = currentLeft - 20;
+
+            // Kiểm tra xem ống đã ra khỏi màn hình hay chưa
+            if (newLeft + pipeWidth < 0) {
+                // Xóa ống khỏi DOM
+                $(this).remove();
+
+                // Thêm ống mới ở cạnh phải
+                // ... (sử dụng placePipeTimer hoặc logic tương tự)
+            } else {
+                $(this).css('left', newLeft + 'px');
+            }
+        });
+    }
+
+    function placePipeTimer() {
+        $.ajax({
+            url: 'controller',
+            method: 'get',
+            data: {
+                action: 'place-pipes'
+            },
+            success: function (data) {
+                const pipes = JSON.parse(data);
+                for (const pipe of pipes) {
+                    const img = $('<img>').attr({
+                        src: pipe.image,
+                        class: 'pipe',
+                        style: `top: `+pipe.y+`px; left: `+pipe.x+`px;`
+                    });
+                    $(document.body).append(img);
+                }
+            },
+            error: function (xhr) {
+                console.error(xhr);
+            }
+        });
+    }
 
     function start() {
         boardWidth = window.innerWidth
@@ -74,8 +120,8 @@
                 boardWidth: boardWidth,
                 boardHeight: boardHeight
             },
-            success: function (data){
-                console.log(data)
+            success: function (data) {
+                // console.log(data)
                 updateDOM(data)
             },
             error: function (xhr) {
@@ -90,6 +136,8 @@
         const bird = data.bird;
         const topPipeImg = data.topPipeImg;
         const bottomPipeImg = data.bottomPipeImg;
+        pipeWidth = data.pipeWidth;
+        pipeHeight = data.pipeHeight;
 
         // Update styles and image sources
         $("#bird").css({
@@ -98,7 +146,7 @@
             width: bird.width,
             height: bird.height
         });
-        $("#bird").attr("src","<%=webUrl%>/" + bird.image);
+        $("#bird").attr("src", "<%=webUrl%>/" + bird.image);
         // Update pipe styles and image sources based on data
     }
 
