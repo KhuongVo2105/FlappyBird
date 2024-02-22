@@ -44,7 +44,6 @@
 
     #bird {
         position: absolute;
-        border: 1px solid black;
     }
 
     .pipe {
@@ -52,37 +51,84 @@
         width: 64px;
         height: 100vh;
     }
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        z-index: 1;
+    }
 </style>
 <img id="bird">
-<img class="pipe" style="top: -400px; left: 90%" src="<%=webUrl+"/"+topPipeImg%>">
-<img class="pipe" style="top: 840px; left: 90%" src="<%=webUrl+"/"+bottomPipeImg%>">
+<h1 id="score"></h1>
 <script>
     let boardWidth, boardHeight,
-        pipeWidth, pipeHeight
+        pipeWidth, pipeHeight,
+        bird, score, gameOver, pipes
+    let countPipe = 0
+    let jump = false
+    let gameLoopInterval, placeTimerInterval
 
     $(document).ready(function () {
         start();
-        setInterval(placePipeTimer, 1500)
-        setInterval(gameLoop, 1000 / 30)
+       placeTimerInterval = setInterval(placePipeTimer, 2000)
+       gameLoopInterval = setInterval(gameLoop, 1000 / 30)
+
+        $(document).on('keydown', jumpEvent)
     })
 
     function gameLoop() {
-        // Di chuyển ống sang trái
-        $('.pipe').each(function () {
-            const currentLeft = parseInt($(this).css('left'));
-            const newLeft = currentLeft - 20;
+        // console.log('gameLoop is running')
+        $.ajax({
+            url: "controller",
+            type: "get",
+            data: {
+                action: "move",
+                jump: jump
+            },
+            success: function (data) {
+                // console.log(data)
+                if (data != null) {
+                    bird = data.bird,
+                        score = data.score,
+                        gameOver = data.gameOver,
+                        pipes = data.pipes;
 
-            // Kiểm tra xem ống đã ra khỏi màn hình hay chưa
-            if (newLeft + pipeWidth < 0) {
-                // Xóa ống khỏi DOM
-                $(this).remove();
+                    //
+                    renderBird(bird)
+                    renderPipes(pipes)
+                    renderScore()
 
-                // Thêm ống mới ở cạnh phải
-                // ... (sử dụng placePipeTimer hoặc logic tương tự)
-            } else {
-                $(this).css('left', newLeft + 'px');
+                    if (gameOver) {
+                        clearInterval(gameLoopInterval);
+                        clearInterval(placeTimerInterval);
+                        let confirmed = confirm("Your score: " + score + "\nRestart game?");
+                        if (confirmed) {
+                            // Send an AJAX request to the servlet to restart the game
+                            $.ajax({
+                                url: "controller",
+                                type: "GET",
+                                data: {
+                                    action: "restart"
+                                },
+                                success: function (data) {
+                                    // Update the game state and DOM based on the response
+                                    updateDOM(data);
+                                    window.location.reload()
+                                },
+                                error: function (xhr) {
+                                    console.error(xhr);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                jump = false
+            },
+            error: function (xhr) {
+                console.error(xhr)
             }
-        });
+        })
     }
 
     function placePipeTimer() {
@@ -91,17 +137,6 @@
             method: 'get',
             data: {
                 action: 'place-pipes'
-            },
-            success: function (data) {
-                const pipes = JSON.parse(data);
-                for (const pipe of pipes) {
-                    const img = $('<img>').attr({
-                        src: pipe.image,
-                        class: 'pipe',
-                        style: `top: `+pipe.y+`px; left: `+pipe.x+`px;`
-                    });
-                    $(document.body).append(img);
-                }
             },
             error: function (xhr) {
                 console.error(xhr);
@@ -133,23 +168,64 @@
     function updateDOM(data) {
         // Access attributes from data object
         const background = data.background;
-        const bird = data.bird;
+        bird = data.bird;
         const topPipeImg = data.topPipeImg;
         const bottomPipeImg = data.bottomPipeImg;
         pipeWidth = data.pipeWidth;
         pipeHeight = data.pipeHeight;
+        score = data.score;
+        gameOver = data.gameOver
 
-        // Update styles and image sources
-        $("#bird").css({
+        renderBird(bird)
+        renderScore()
+    }
+
+    function renderBird(bird) {
+        $('#bird').remove()
+
+        const nBird = $('<img>').attr("id", "bird").css({
             top: bird.y,
             left: bird.x,
             width: bird.width,
             height: bird.height
-        });
-        $("#bird").attr("src", "<%=webUrl%>/" + bird.image);
-        // Update pipe styles and image sources based on data
+        }).attr("src", "<%=webUrl%>/" + bird.image)
+
+        $('body').append(nBird)
     }
 
+    function renderPipes(pipes) {
+        $('img.pipe').remove()
+        let body = $('body')
+        pipes.forEach((pipe, index) => {
+            let temp
+            if (index % 2 != 0) {
+                temp = $('<img>').addClass('pipe').css({
+                    top: pipe.y,
+                    left: pipe.x
+                }).attr('src', '<%=webUrl+"/"+bottomPipeImg%>').attr('id', countPipe)
+            } else {
+                temp = $('<img>').addClass('pipe').css({
+                    top: pipe.y,
+                    left: pipe.x
+                }).attr('src', '<%=webUrl+"/"+topPipeImg%>').attr('id', countPipe)
+            }
+            body.append(temp)
+            countPipe++
+        })
+    }
+
+    function jumpEvent(event) {
+        if (event.which == 32 || event.which == 38) { // 32 là Space, 38 là ArrowUp
+            jump = true
+        }
+    }
+
+    function renderScore(){
+        $('#score').remove()
+        $('body').append(
+            $('<h1></h1>').attr('id','score').text(score)
+        )
+    }
 </script>
 </body>
 </html>
