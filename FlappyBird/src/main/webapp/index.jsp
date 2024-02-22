@@ -62,7 +62,7 @@
 
     $(document).ready(function () {
         start();
-        setInterval(placePipeTimer, 5000)
+        setInterval(placePipeTimer, 1500)
         setInterval(gameLoop, 1000 / 30)
     })
 
