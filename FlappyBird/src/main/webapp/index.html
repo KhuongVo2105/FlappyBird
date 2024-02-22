@@ -19,17 +19,56 @@
         margin: 0;
         background-image: url("Resources/background.png");
         background-size: 100% 100%;
+        overflow: clip;
+
+        position: relative;
+    }
+
+    #bird {
+        position: absolute;
+        top: 50%;
+        left: 15%;
+        width: 70px;
+        height: 47px;
+
+        border: 1px solid black;
+    }
+
+    .pipe {
+        position: absolute;
+        width: 64px;
+        height: 600px;
     }
 </style>
-
-<button type="button">click</button>
-
+<img id="bird" src="Resources/bird.png">
+<img class="pipe" style="top: -400px; left: 90%" src="Resources/toppipe.png">
+<img class="pipe" style="top: 400px; left: 90%" src="Resources/bottompipe.png">
 <script>
+    let boardWidth, boardHeight
+
     $(document).ready(function () {
-        $('button').click(function () {
-            console.log('click click')
-        })
+        start();
     })
+
+    function start() {
+        boardWidth = window.innerWidth
+        boardHeight = window.innerHeight
+        $.ajax({
+            url: "controller",
+            type: "GET",
+            data: {
+                action: "start",
+                boardWidth: boardWidth,
+                boardHeight: boardHeight
+            },
+            success: function (data) {
+
+            },
+            error: function (xhr) {
+                console.error(xhr)
+            }
+        })
+    }
 </script>
 </body>
 </html>
